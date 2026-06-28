@@ -1,0 +1,26 @@
+#!/bin/bash
+
+mkdir -p build iso/boot
+
+g++ -m32 -g -O0 -ffreestanding -fno-exceptions -fno-rtti -Isrc/include -c src/kernel.cpp -o build/kernel.o
+g++ -m32 -g -O0 -ffreestanding -fno-exceptions -fno-rtti -Isrc/include -c src/idt.cpp -o build/idt.o
+g++ -m32 -g -O0 -ffreestanding -fno-exceptions -fno-rtti -Isrc/include -c src/isr_common.cpp -o build/isr_common.o
+g++ -m32 -g -O0 -ffreestanding -fno-exceptions -fno-rtti -Isrc/include -c src/stubs.cpp -o build/stubs.o
+g++ -m32 -g -O0 -fno-omit-frame-pointer -ffreestanding -fno-builtin -c src/libc_mem.cpp -o build/libc_mem.o
+g++ -m32 -g -O0 -fno-omit-frame-pointer -ffreestanding -fno-builtin -c src/ports.cpp -o build/ports.o
+g++ -m32 -g -O0 -fno-omit-frame-pointer -ffreestanding -fno-builtin -c src/pic.cpp -o build/pic.o
+g++ -m32 -g -O0 -fno-omit-frame-pointer -ffreestanding -fno-builtin -c src/pit.cpp -o build/pit.o
+g++ -m32 -g -O0 -fno-omit-frame-pointer -ffreestanding -fno-builtin -c src/timer.cpp -o build/timer.o
+g++ -m32 -g -O0 -fno-omit-frame-pointer -ffreestanding -fno-builtin -c src/keyboard.cpp -o build/keyboard.o
+
+nasm -f elf32 -g -F dwarf src/boot.s -o build/boot.o
+nasm -f elf32 -g -F dwarf src/interrupts.s -o build/interrupts.o
+nasm -f elf32 -g -F dwarf src/isr_common_wrap.s -o build/isr_common_wrap.o
+
+ld -m elf_i386 -T src/linker.ld -o build/kernel.elf \
+    build/boot.o build/idt.o build/interrupts.o build/isr_common_wrap.o \
+    build/isr_common.o build/kernel.o build/libc_mem.o build/stubs.o \
+    build/ports.o build/pic.o build/pit.o build/timer.o build/keyboard.o
+
+cp build/kernel.elf iso/boot/kernel.elf
+grub-mkrescue -o build/myos.iso iso
